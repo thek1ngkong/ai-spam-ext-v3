@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI-SPAM Scanner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ═══════════════════════════════════════
+       ROOT VARIABLES & RESET — LIGHT THEME
+    ═══════════════════════════════════════ */
+    :root {
+      --bg:          #f5f7fa;
+      --bg-panel:    #ffffff;
+      --bg-card:     #ffffff;
+      --bg-hover:    #f0f4ff;
+      --border:      #e2e8f0;
+      --border-glow: #c7d4e8;
+
+      --green:       #00875a;
+      --green-dim:   #006644;
+      --cyan:        #0077cc;
+      --amber:       #b45309;
+      --amber-dim:   #92400e;
+      --red:         #cc0033;
+      --red-dim:     #99001f;
+      --purple:      #6d28d9;
+
+      --text:        #1a202c;
+      --text-dim:    #4a5568;
+      --text-muted:  #a0aec0;
+
+      --font-mono: 'Share Tech Mono', monospace;
+      --font-display: 'Orbitron', monospace;
+
+      --radius: 8px;
+      --transition: 0.2s ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ═══════════════════════════════════════
+       SCROLLBAR
+    ═══════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
+    /* ═══════════════════════════════════════
+       BODY
+    ═══════════════════════════════════════ */
+    body {
+      width: 430px;
+      min-height: 200px;
+      max-height: 640px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background: var(--bg);
+      font-family: var(--font-mono);
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    /* Subtle grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(0,100,220,0.04) 28px, rgba(0,100,220,0.04) 29px),
+        repeating-linear-gradient(90deg, transparent, transparent 28px, rgba(0,100,220,0.04) 28px, rgba(0,100,220,0.04) 29px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper { position: relative; z-index: 1; }
+
+    /* ═══════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════ */
+    .header {
+      background: linear-gradient(135deg, #1a56db 0%, #1e40af 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      opacity: 0.8;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .shield-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1));
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 16px rgba(255,255,255,0.2), inset 0 1px 0 rgba(255,255,255,0.2);
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .shield-icon::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, rgba(0,255,136,0.3), transparent);
+      z-index: -1;
+    }
+
+    .header-text { flex: 1; }
+
+    .header-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 3px;
+      line-height: 1;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .header-title span { color: #93c5fd; }
+
+    .header-subtitle {
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      margin-top: 3px;
+    }
+
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      padding: 3px 8px;
+      font-size: 9px;
+      color: #ffffff;
+      letter-spacing: 1px;
+    }
+
+    .status-dot {
+      width: 6px; height: 6px;
+      background: #86efac;
+      border-radius: 50%;
+      box-shadow: 0 0 6px rgba(255,255,255,0.5);
+      animation: pulse-dot 2s ease infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--green); }
+      50% { opacity: 0.5; box-shadow: 0 0 12px var(--green); }
+    }
+
+    .btn-icon {
+      width: 28px; height: 28px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: var(--radius);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      transition: var(--transition);
+      color: rgba(255,255,255,0.8);
+    }
+    .btn-icon:hover { border-color: #93c5fd; color: #1d4ed8; background: #eff6ff; }
+
+    /* ═══════════════════════════════════════
+       GMAIL STATUS BAR
+    ═══════════════════════════════════════ */
+    .gmail-bar {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .gmail-bar-icon { font-size: 13px; }
+
+    .gmail-bar-text { flex: 1; color: var(--text-dim); }
+
+    .gmail-bar-text strong { color: var(--text); }
+
+    .gmail-indicator {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+    .gmail-indicator.detected { background: var(--green); box-shadow: 0 0 5px var(--green); }
+    .gmail-indicator.no-email { background: var(--amber); box-shadow: 0 0 5px var(--amber); }
+
+    /* ═══════════════════════════════════════
+       EMAIL PREVIEW CARD
+    ═══════════════════════════════════════ */
+    .email-preview {
+      margin: 12px 14px 0;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      display: none;
+    }
+    .email-preview.visible { display: block; }
+
+    .email-preview-label {
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+
+    .email-preview-subject {
+      font-size: 12px;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+
+    .email-preview-meta {
+      font-size: 10px;
+      color: var(--text-dim);
+      display: flex;
+      gap: 12px;
+    }
+    .email-preview-meta span { display: flex; align-items: center; gap: 4px; }
+
+    /* ═══════════════════════════════════════
+       SCAN BUTTON
+    ═══════════════════════════════════════ */
+    .scan-section {
+      padding: 14px 14px 0;
+    }
+
+    .btn-scan {
+      width: 100%;
+      height: 48px;
+      background: linear-gradient(135deg, #1a56db 0%, #1d4ed8 100%);
+      border: 1px solid #1e40af;
+      border-radius: var(--radius);
+      color: #ffffff;
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-scan:hover:not(:disabled) {
+      background: linear-gradient(135deg, #1e40af 0%, #1a56db 100%);
+      border-color: #1e3a8a;
+      box-shadow: 0 4px 20px rgba(26,86,219,0.4);
+      color: #fff;
+    }
+
+    .btn-scan:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-scan::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+      transform: skewX(-15deg);
+      transition: 0.5s;
+    }
+    .btn-scan:hover:not(:disabled)::before { left: 150%; }
+
+    .scan-icon { font-size: 18px; }
+
+    /* Scanning animation */
+    .btn-scan.scanning {
+      background: linear-gradient(135deg, #1e40af 0%, #1a56db 100%);
+      border-color: #1e3a8a;
+      color: #ffffff;
+      opacity: 0.85;
+    }
+    .btn-scan.scanning .scan-label { display: none; }
+    .btn-scan.scanning .scan-loading { display: flex; align-items: center; gap: 8px; }
+    .scan-loading { display: none; }
+
+    .scan-spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ═══════════════════════════════════════
+       SETTINGS PANEL
+    ═══════════════════════════════════════ */
+    .settings-panel {
+      margin: 12px 14px 0;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: none;
+    }
+    .settings-panel.open { display: block; }
+
+    .settings-header {
+      padding: 9px 12px;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: #1d4ed8;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .settings-body { padding: 12px; }
+
+    .field-label {
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+
+    .field-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .field-input {
+      flex: 1;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 7px 10px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      outline: none;
+      transition: var(--transition);
+    }
+    .field-input:focus { border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+    .field-input::placeholder { color: var(--text-muted); }
+
+    .btn-save {
+      background: #eff6ff;
+      border: 1px solid #93c5fd;
+      border-radius: var(--radius);
+      padding: 7px 12px;
+      color: #1d4ed8;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .btn-save:hover { background: #dbeafe; }
+
+    .settings-note {
+      margin-top: 8px;
+      font-size: 10px;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+    .settings-note a {
+      color: var(--cyan);
+      text-decoration: none;
+    }
+
+    .key-saved {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      color: var(--green);
+      margin-top: 8px;
+      display: none;
+    }
+
+    /* ═══════════════════════════════════════
+       ERROR STATE
+    ═══════════════════════════════════════ */
+    .error-banner {
+      margin: 12px 14px 0;
+      background: #fff1f2;
+      border: 1px solid #fda4af;
+      border-left: 4px solid #e11d48;
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #9f1239;
+      display: none;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .error-banner.visible { display: flex; }
+    .error-banner-icon { font-size: 14px; flex-shrink: 0; }
+
+    /* ═══════════════════════════════════════
+       RESULTS SECTION
+    ═══════════════════════════════════════ */
+    .results-section {
+      margin: 12px 14px 0;
+      display: none;
+    }
+    .results-section.visible { display: block; }
+
+    .results-label {
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    /* Status Card */
+    .status-card {
+      border-radius: var(--radius);
+      padding: 14px;
+      border: 1px solid;
+      margin-bottom: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+    .status-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+    }
+    .status-card.safe {
+      background: #f0fdf4;
+      border-color: #86efac;
+      border-left: 4px solid #16a34a;
+    }
+    .status-card.safe::before { display: none; }
+    .status-card.suspicious {
+      background: #fffbeb;
+      border-color: #fcd34d;
+      border-left: 4px solid #d97706;
+    }
+    .status-card.suspicious::before { display: none; }
+    .status-card.unsafe {
+      background: #fff1f2;
+      border-color: #fda4af;
+      border-left: 4px solid #e11d48;
+    }
+    .status-card.unsafe::before { display: none; }
+
+    .status-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .status-badge-large {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+    .status-badge-large.safe { color: #15803d; }
+    .status-badge-large.suspicious { color: #b45309; }
+    .status-badge-large.unsafe { color: #be123c; }
+
+    .risk-score {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 3px;
+    }
+    .risk-score.safe { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .risk-score.suspicious { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+    .risk-score.unsafe { background: #ffe4e6; color: #be123c; border: 1px solid #fda4af; }
+
+    .status-meta {
+      font-size: 11px;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+    .status-meta span { color: var(--text-dim); }
+
+    .risk-summary {
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.5;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Threat badges */
+    .threat-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    .threat-tag {
+      background: #ffe4e6;
+      border: 1px solid #fda4af;
+      color: #be123c;
+      font-size: 9px;
+      letter-spacing: 1px;
+      padding: 3px 7px;
+      border-radius: 3px;
+    }
+
+    /* Collapsible detail panels */
+    .detail-panel {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+
+    .detail-toggle {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 9px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 1px;
+      transition: var(--transition);
+    }
+    .detail-toggle:hover { background: #f0f4ff; }
+
+    .detail-toggle-left {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .detail-toggle-icon { font-size: 12px; }
+
+    .detail-count {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 9px;
+      color: var(--text-dim);
+    }
+
+    .detail-arrow {
+      font-size: 10px;
+      color: var(--text-dim);
+      transition: transform 0.2s;
+    }
+    .detail-toggle.open .detail-arrow { transform: rotate(180deg); }
+
+    .detail-body {
+      display: none;
+      padding: 0 12px 12px;
+      border-top: 1px solid var(--border);
+    }
+    .detail-body.open { display: block; }
+
+    /* Suspicious elements list */
+    .sus-item {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .sus-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .sus-type {
+      font-size: 8px;
+      letter-spacing: 1px;
+      color: #be123c;
+      background: #ffe4e6;
+      border: 1px solid #fda4af;
+      border-radius: 3px;
+      padding: 2px 5px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .sus-content { flex: 1; min-width: 0; }
+    .sus-value {
+      font-size: 11px;
+      color: var(--text);
+      word-break: break-all;
+      margin-bottom: 2px;
+    }
+    .sus-reason { font-size: 10px; color: var(--text-dim); line-height: 1.4; }
+
+    /* Links analysis */
+    .link-item {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .link-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .link-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 3px;
+    }
+
+    .link-risk {
+      font-size: 8px;
+      letter-spacing: 1px;
+      padding: 2px 5px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .link-risk.safe { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .link-risk.suspicious { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+    .link-risk.unsafe { background: #ffe4e6; color: #be123c; border: 1px solid #fda4af; }
+
+    .link-anchor { font-size: 11px; color: var(--text); }
+    .link-url { font-size: 10px; color: var(--text-dim); word-break: break-all; margin-bottom: 2px; }
+    .link-reason { font-size: 10px; color: var(--text-dim); line-height: 1.4; }
+
+    /* ═══════════════════════════════════════
+       SECURITY TIPS
+    ═══════════════════════════════════════ */
+    .tips-section {
+      margin: 0 14px 0;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .tips-header {
+      padding: 9px 12px;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: #1d4ed8;
+      background: #dbeafe;
+      border-bottom: 1px solid #bfdbfe;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tips-body { padding: 10px 12px; }
+
+    .tip-item {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+    .tip-item:last-child { margin-bottom: 0; }
+
+    .tip-num {
+      color: #1d4ed8;
+      font-size: 9px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      font-weight: bold;
+    }
+
+
+    /* ═══════════════════════════════════════
+       SERVER STATUS
+    ═══════════════════════════════════════ */
+    .server-status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      font-size: 11px;
+      color: var(--text);
+    }
+    .server-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .server-dot.online  { background: #16a34a; box-shadow: 0 0 6px rgba(22,163,74,0.5); }
+    .server-dot.offline { background: #dc2626; box-shadow: 0 0 6px rgba(220,38,38,0.4); }
+    .server-dot.checking { animation: pulse-check 1s ease infinite; background: #d97706; }
+    @keyframes pulse-check {
+      0%,100% { opacity:1; } 50% { opacity:0.4; }
+    }
+
+    /* ═══════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════ */
+    .footer {
+      padding: 10px 14px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 2px solid var(--border);
+      background: #f8faff;
+      margin-top: 12px;
+    }
+
+    .footer-left {
+      font-size: 9px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    .footer-right {
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    .footer-right span { color: #1a56db; }
+
+    /* ═══════════════════════════════════════
+       NO-API KEY STATE
+    ═══════════════════════════════════════ */
+    .no-key-banner {
+      margin: 12px 14px 0;
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-left: 4px solid #d97706;
+      border-radius: var(--radius);
+      padding: 11px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #92400e;
+      line-height: 1.5;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .spacer { height: 12px; }
+
+    /* ═══════════════════════════════════════
+       SCAN PROGRESS BAR
+    ═══════════════════════════════════════ */
+    .progress-bar-wrap {
+      margin: 10px 14px 0;
+      height: 2px;
+      background: var(--border);
+      border-radius: 1px;
+      overflow: hidden;
+      display: none;
+    }
+    .progress-bar-wrap.visible { display: block; }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #1a56db, #60a5fa);
+      border-radius: 1px;
+      transition: width 0.3s ease;
+      animation: progress-glow 1.5s ease infinite;
+    }
+
+    @keyframes progress-glow {
+      0%, 100% { box-shadow: none; }
+      50% { box-shadow: 0 0 8px var(--green); }
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- ── HEADER ─────────────────────────────── -->
+  <div class="header">
+    <div class="header-inner">
+      <div class="shield-icon">🛡️</div>
+      <div class="header-text">
+        <div class="header-title">AI<span>-SPAM</span></div>
+        <div class="header-subtitle">DEEP-SCAN EMAIL THREAT DETECTOR</div>
+      </div>
+      <div class="header-actions">
+        <div class="status-badge">
+          <div class="status-dot"></div>
+          ACTIVE
+        </div>
+        <button class="btn-icon" id="btnSettings" title="Settings">⚙</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── GMAIL STATUS BAR ───────────────────── -->
+  <div class="gmail-bar">
+    <span class="gmail-bar-icon">📧</span>
+    <span class="gmail-bar-text" id="gmailStatus">Checking Gmail...</span>
+    <div class="gmail-indicator" id="gmailIndicator"></div>
+  </div>
+
+  <!-- ── NO API KEY BANNER ──────────────────── -->
+  <div class="no-key-banner" id="noKeyBanner" style="display:none;display:none">
+    <span>⚠️</span>
+    <div>
+      <strong>API Key Required</strong><br>
+      Server is setting up. Please wait a moment and try again, or check your connection.
+    </div>
+  </div>
+
+  <!-- ── EMAIL PREVIEW ─────────────────────── -->
+  <div class="email-preview" id="emailPreview">
+    <div class="email-preview-label">📬 DETECTED EMAIL</div>
+    <div class="email-preview-subject" id="previewSubject">—</div>
+    <div class="email-preview-meta">
+      <span>👤 <span id="previewSender">—</span></span>
+      <span>🌐 <span id="previewDomain">—</span></span>
+    </div>
+  </div>
+
+  <!-- ── SCAN BUTTON ───────────────────────── -->
+  <div class="scan-section">
+    <button class="btn-scan" id="btnScan" disabled>
+      <span class="scan-label">
+        <span class="scan-icon">🔍</span>
+        DEEP SCAN
+      </span>
+      <span class="scan-loading">
+        <div class="scan-spinner"></div>
+        ANALYZING THREATS...
+      </span>
+    </button>
+  </div>
+
+  <!-- ── SCAN PROGRESS BAR ─────────────────── -->
+  <div class="progress-bar-wrap" id="progressWrap">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <!-- ── ERROR BANNER ──────────────────────── -->
+  <div class="error-banner" id="errorBanner">
+    <span class="error-banner-icon">⚠</span>
+    <span id="errorText">An error occurred.</span>
+  </div>
+
+  <!-- ── SETTINGS PANEL ────────────────────── -->
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-header">⚙ SETTINGS</div>
+    <div class="settings-body">
+      <div style="text-align:center;padding:8px 0 12px">
+        <div style="font-size:28px;margin-bottom:6px">🛡️</div>
+        <div style="font-size:12px;color:var(--text);font-weight:bold;margin-bottom:4px">No API Keys Needed!</div>
+        <div style="font-size:11px;color:var(--text-dim);line-height:1.6">
+          Your emails are scanned by our secure<br>backend server — 100% private, no setup.
+        </div>
+      </div>
+
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:10px 12px;margin-bottom:10px">
+        <div style="font-size:10px;color:#15803d;font-weight:bold;margin-bottom:4px">⚡ HOW IT WORKS</div>
+        <div style="font-size:10px;color:#166534;line-height:1.7">
+          Extension → Secure Server → Groq AI<br>
+          (falls back to OpenAI automatically)
+        </div>
+      </div>
+
+      <div class="field-label">SERVER STATUS</div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:11px;display:flex;align-items:center;justify-content:space-between">
+        <span id="serverStatus" style="color:var(--text-dim)">Checking...</span>
+        <span style="color:var(--text-muted);font-size:10px">AUTO</span>
+      </div>
+
+      <div class="key-saved" id="keySavedMsg">✓ Connected successfully</div>
+    </div>
+  </div>
+
+  <!-- ── RESULTS SECTION ───────────────────── -->
+  <div class="results-section" id="resultsSection">
+    <div class="results-label">⚡ SCAN RESULTS</div>
+
+    <!-- Status Card -->
+    <div class="status-card" id="statusCard">
+      <div class="status-header">
+        <div class="status-badge-large" id="statusBadge">—</div>
+        <div class="risk-score" id="riskScore">SCORE: —</div>
+      </div>
+      <div class="status-meta"><span>Subject: </span><span id="resultSubject">—</span></div>
+      <div class="status-meta"><span>From: </span><span id="resultSender">—</span></div>
+      <div class="threat-tags" id="threatTags"></div>
+      <div class="risk-summary" id="riskSummary">—</div>
+    </div>
+
+    <!-- Suspicious Elements -->
+    <div class="detail-panel" id="panelSuspicious" style="display:none">
+      <button class="detail-toggle" id="toggleSuspicious">
+        <span class="detail-toggle-left">
+          <span class="detail-toggle-icon">🚩</span>
+          SUSPICIOUS ELEMENTS
+          <span class="detail-count" id="countSuspicious">0</span>
+        </span>
+        <span class="detail-arrow">▼</span>
+      </button>
+      <div class="detail-body" id="bodySuspicious"></div>
+    </div>
+
+    <!-- Link Analysis -->
+    <div class="detail-panel" id="panelLinks" style="display:none">
+      <button class="detail-toggle" id="toggleLinks">
+        <span class="detail-toggle-left">
+          <span class="detail-toggle-icon">🔗</span>
+          LINK ANALYSIS
+          <span class="detail-count" id="countLinks">0</span>
+        </span>
+        <span class="detail-arrow">▼</span>
+      </button>
+      <div class="detail-body" id="bodyLinks"></div>
+    </div>
+
+  </div><!-- /results -->
+
+  <!-- ── SECURITY TIPS ─────────────────────── -->
+  <div class="tips-section" id="tipsSection" style="display:none">
+    <div class="tips-header">🛡 SECURITY TIPS FOR YOU</div>
+    <div class="tips-body" id="tipsBody"></div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <!-- ── FOOTER ────────────────────────────── -->
+  <div class="footer">
+    <div class="footer-left">AI-SPAM v2.0.0 · SERVER-BACKED</div>
+    <div class="footer-right">THREATS: 10 <span>VECTORS</span></div>
+  </div>
+
+</div><!-- /wrapper -->
+<script src="popup.js"></script>
+</body>
+</html>
